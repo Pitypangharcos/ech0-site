@@ -6,63 +6,113 @@
   <title>Ech0 Feed</title>
   <link rel="stylesheet" href="style.css" />
   <style>
-    #aiPreview {
-      margin-top: 2em;
-      padding: 1em;
-      background: #1a1a1a;
-      border-left: 4px solid #5c5cff;
+    body {
+      background: #0e0e0e;
+      color: #f0f0f0;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 1.5rem;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #ffffff;
+    }
+
+    textarea {
+      width: 100%;
       max-width: 600px;
+      padding: 1rem;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+      resize: none;
+    }
+
+    button {
+      background: #5c5cff;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-right: 0.5rem;
+    }
+
+    button:hover {
+      background: #3f3fff;
+    }
+
+    #previewBox {
+      background: #1b1b1b;
+      border-left: 4px solid #5c5cff;
+      padding: 1rem;
+      margin-top: 1rem;
+      max-width: 600px;
+      border-radius: 12px;
       display: none;
     }
-    .button-group {
-      margin-top: 1em;
-      display: flex;
-      gap: 1em;
+
+    #feed {
+      margin-top: 2rem;
+      max-width: 600px;
     }
+
+    .post {
+      background: #1a1a1a;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 12px;
+      border: 1px solid #333;
+    }
+
+    .username {
+      color: #9caeff;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+
     .likes {
-      margin-top: 0.5em;
-      color: #ccc;
+      text-align: right;
+      color: #aaa;
+      font-size: 0.85rem;
+    }
+
+    .feedback {
+      font-style: italic;
+      color: #888;
+      margin-top: 0.75rem;
     }
   </style>
 </head>
 <body>
-  <main>
-    <h1>ech0 // feed</h1>
+  <h1>Ech0 Feed</h1>
 
-    <textarea id="postInput" rows="4" placeholder="What are you thinking?"></textarea>
-    <div class="select-tone">
-      <label for="toneSelect">Tone:</label>
-      <select id="toneSelect">
-        <option value="attention-grabbing">Attention-grabbing</option>
-        <option value="funny">Funny</option>
-        <option value="sarcastic">Sarcastic</option>
-        <option value="playful">Playful</option>
-      </select>
-    </div>
-    <button id="postButton">Generate Feedback</button>
+  <textarea id="postInput" rows="4" placeholder="Write something real..."></textarea>
+  <br>
+  <button id="nextBtn">Next</button>
 
-    <div id="aiPreview">
-      <p><strong>Your Post:</strong></p>
-      <div id="previewContent"></div>
-      <div class="feedback" id="feedbackTipText"></div>
-      <div class="button-group">
-        <button id="confirmButton">Confirm & Publish</button>
-        <button id="editButton">Edit</button>
-      </div>
-    </div>
+  <div id="previewBox">
+    <p><strong>Preview:</strong></p>
+    <p id="previewText"></p>
+    <p class="feedback" id="previewFeedback"></p>
+    <button id="editBtn">Edit my post</button>
+    <button id="publishBtn">Publish as is</button>
+  </div>
 
-    <section id="feed"></section>
-  </main>
+  <div id="feed"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
       getFirestore, collection, addDoc, query, orderBy,
-      getDocs, updateDoc, doc, serverTimestamp
+      getDocs, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import {
-      getAuth, onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCRpFRHKlaSs2yLlZddXI2rQYVkEBG1AKo",
@@ -75,112 +125,78 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const auth = getAuth(app);
 
     const postInput = document.getElementById("postInput");
-    const toneSelect = document.getElementById("toneSelect");
-    const postButton = document.getElementById("postButton");
-    const previewContent = document.getElementById("previewContent");
-    const feedbackTipText = document.getElementById("feedbackTipText");
-    const aiPreview = document.getElementById("aiPreview");
-    const confirmButton = document.getElementById("confirmButton");
-    const editButton = document.getElementById("editButton");
+    const nextBtn = document.getElementById("nextBtn");
+    const previewBox = document.getElementById("previewBox");
+    const previewText = document.getElementById("previewText");
+    const previewFeedback = document.getElementById("previewFeedback");
+    const editBtn = document.getElementById("editBtn");
+    const publishBtn = document.getElementById("publishBtn");
     const feedEl = document.getElementById("feed");
 
-    let previewData = {};
+    let previewData = { text: "", feedback: "", wasEdited: false };
 
-    postButton.addEventListener("click", async () => {
+    nextBtn.addEventListener("click", async () => {
       const text = postInput.value.trim();
-      const tone = toneSelect.value;
-
       if (!text) return;
-
-      try {
-        const res = await fetch("/.netlify/functions/generatePost", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uid: "temp", username: "temp", text, tone })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          previewContent.textContent = text;
-          feedbackTipText.textContent = data.feedbackTip;
-          aiPreview.style.display = "block";
-
-          previewData = {
-            originalText: text,
-            feedbackTip: data.feedbackTip,
-            tone: tone,
-            wasEdited: false
-          };
-
-          postButton.style.display = "none";
-          postInput.disabled = true;
-          toneSelect.disabled = true;
-        } else {
-          alert("Failed to analyze post.");
-        }
-      } catch (err) {
-        console.error(err);
-        alert("AI failed.");
+      const res = await fetch("/.netlify/functions/generatePost", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid: "demoUser", username: "user", text, tone: "attention-grabbing" })
+      });
+      const data = await res.json();
+      if (data.success) {
+        previewText.textContent = text;
+        previewFeedback.textContent = data.feedbackTip;
+        previewBox.style.display = "block";
+        previewData.text = text;
+        previewData.feedback = data.feedbackTip;
       }
     });
 
-    confirmButton.addEventListener("click", async () => {
-      onAuthStateChanged(auth, async (user) => {
-        if (!user) return alert("Not logged in.");
-
-        try {
-          await addDoc(collection(db, "posts"), {
-            ...previewData,
-            uid: user.uid,
-            username: user.email.split("@")[0],
-            createdAt: serverTimestamp(),
-            likes: 0
-          });
-
-          loadFeed();
-
-          postInput.value = "";
-          aiPreview.style.display = "none";
-          postButton.style.display = "inline-block";
-          postInput.disabled = false;
-          toneSelect.disabled = false;
-        } catch (err) {
-          console.error("Publish error:", err);
-        }
-      });
-    });
-
-    editButton.addEventListener("click", () => {
+    editBtn.addEventListener("click", async () => {
       previewData.wasEdited = true;
-      aiPreview.style.display = "none";
-      postButton.style.display = "inline-block";
-      postInput.disabled = false;
-      toneSelect.disabled = false;
+      await publishPost();
     });
+
+    publishBtn.addEventListener("click", async () => {
+      previewData.wasEdited = false;
+      await publishPost();
+    });
+
+    async function publishPost() {
+      await addDoc(collection(db, "posts"), {
+        uid: "demoUser",
+        username: "user",
+        originalText: previewData.text,
+        feedbackTip: previewData.feedback,
+        wasEdited: previewData.wasEdited,
+        createdAt: serverTimestamp(),
+        likes: 0
+      });
+      postInput.value = "";
+      previewBox.style.display = "none";
+      loadFeed();
+    }
 
     async function loadFeed() {
       const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
       const snap = await getDocs(q);
-
       feedEl.innerHTML = "";
       snap.forEach(doc => {
         const data = doc.data();
-        const post = document.createElement("div");
-        post.className = "post";
-        post.innerHTML = `
+        const postEl = document.createElement("div");
+        postEl.className = "post";
+        postEl.innerHTML = `
           <div class="username">@${data.username || "anon"}</div>
-          ${data.originalText}
-          <div class="feedback">${data.feedbackTip || ""}</div>
-          <div class="likes">❤️ ${data.likes || 0} like${data.likes === 1 ? "" : "s"}</div>
+          <div>${data.originalText}</div>
+          <div class="likes">❤️ ${data.likes || 0}</div>
         `;
-        feedEl.appendChild(post);
+        feedEl.appendChild(postEl);
       });
     }
 
-    // Initial load
     loadFeed();
   </script>
 </body>
