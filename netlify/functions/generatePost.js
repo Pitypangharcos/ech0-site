@@ -1,4 +1,31 @@
-const fetch = require("node-fetch");
+const fakeAIResponse = (text, tone) => {
+  const responses = {
+    funny: [
+      "If life gives you lemons, ask for tequila.",
+      "I tried to be productive today... and then I blinked.",
+      "Mondays should come with a warning label."
+    ],
+    sarcastic: [
+      "Oh great, another meeting that could’ve been an email.",
+      "Sure, let me drop everything and work on your emergency.",
+      "I'm not saying I'm tired, but my yawn just yawned."
+    ],
+    "attention-grabbing": [
+      "You’re not invisible. You’re just being filtered.",
+      "They see you. They scroll. You disappear. Echo louder.",
+      "Engage now or stay ignored forever."
+    ],
+    playful: [
+      "Poking algorithms with a digital stick.",
+      "This post contains 0% logic but 100% vibes.",
+      "Danced with my shadow today. It won."
+    ]
+  };
+
+  const toneResponses = responses[tone] || responses["attention-grabbing"];
+  const choice = Math.floor(Math.random() * toneResponses.length);
+  return toneResponses[choice];
+};
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -11,65 +38,27 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: "Missing required fields" }) };
   }
 
-  const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-  const prompt = `Rewrite the following user input as a ${tone}, attention-grabbing social media post optimized for engagement. Keep it authentic to the user's tone:\n\nUser input: "${text}"`;
+  const aiPost = fakeAIResponse(text, tone);
 
-  try {
-    const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-3.5-turbo",
-        messages: [
-          { role: "system", content: "You are a social media assistant that rewrites user input to be more viral and emotional." },
-          { role: "user", content: prompt }
-        ],
-        temperature: 0.9,
-        max_tokens: 100
-      })
+  const admin = require("firebase-admin");
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.applicationDefault()
     });
-
-    const openaiData = await openaiResponse.json();
-    console.log("OpenAI response:", JSON.stringify(openaiData, null, 2));
-
-    const aiPost = openaiData.choices?.[0]?.message?.content?.trim();
-
-    if (!aiPost) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "AI failed to generate a response", openaiData })
-      };
-    }
-
-    const admin = require("firebase-admin");
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.applicationDefault()
-      });
-    }
-    const db = admin.firestore();
-
-    await db.collection("posts").add({
-      userId: uid,
-      username: "anonymous",
-      originalText: text,
-      aiPost,
-      tone,
-      createdAt: new Date().toISOString()
-    });
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ success: true, aiPost })
-    };
-  } catch (err) {
-    console.error("Error in generatePost:", err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "Failed to generate or store post" })
-    };
   }
+  const db = admin.firestore();
+
+  await db.collection("posts").add({
+    userId: uid,
+    username: "anonymous",
+    originalText: text,
+    aiPost,
+    tone,
+    createdAt: new Date().toISOString()
+  });
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify({ success: true, aiPost })
+  };
 };
