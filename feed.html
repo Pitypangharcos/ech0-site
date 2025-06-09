@@ -1,166 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ech0 Feed</title>
-  <link rel="stylesheet" href="style.css" />
   <style>
-    .feed-container {
-      max-width: 720px;
-      margin: 2rem auto;
-      padding: 1rem;
-    }
-
-    .post-form {
-      margin-bottom: 2rem;
-    }
-
-    .tone-options {
-      margin: 0.5rem 0;
-    }
-
-    .post {
-      padding: 1rem;
-      border: 1px solid #ccc;
-      margin-bottom: 1rem;
-      border-radius: 8px;
-      background: #fff;
-    }
-
-    .post time {
-      font-size: 0.8rem;
-      color: #888;
-    }
-
-    .post .original {
-      font-style: italic;
-      color: #444;
-    }
+    body { font-family: sans-serif; background: #111; color: #eee; padding: 2em; }
+    #feed { margin-top: 2em; }
+    .post { padding: 1em; border-bottom: 1px solid #444; }
+    .username { font-weight: bold; color: #88f; }
+    .feedback { margin-top: 0.5em; font-style: italic; color: #888; }
   </style>
 </head>
 <body>
-  <main class="feed-container">
-    <h1>Your Feed</h1>
+  <h1>ech0 // feed</h1>
 
-    <label>
-      <input type="checkbox" id="toggleOwnFeed" checked>
-      Show only my posts
-    </label>
+  <div>
+    <textarea id="postInput" rows="4" style="width:100%; max-width:600px;" placeholder="What's your message?"></textarea>
+    <br/>
+    <select id="toneSelect">
+      <option value="attention-grabbing">Attention-grabbing</option>
+      <option value="funny">Funny</option>
+      <option value="sarcastic">Sarcastic</option>
+      <option value="playful">Playful</option>
+    </select>
+    <br/><br/>
+    <button id="postButton">Post</button>
+    <div id="feedbackTip" class="feedback"></div>
+  </div>
 
-    <form id="post-form" class="post-form">
-      <label for="text">What's on your mind?</label>
-      <textarea id="text" rows="3" style="width:100%;" required></textarea>
+  <div id="feed"></div>
 
-      <div class="tone-options">
-        <label for="tone">Choose tone:</label>
-        <select id="tone">
-          <option value="funny">Funny</option>
-          <option value="sarcastic">Sarcastic</option>
-          <option value="attention-grabbing">Attention-Grabbing</option>
-          <option value="playful">Playful</option>
-        </select>
-      </div>
+  <script>
+    const postButton = document.getElementById("postButton");
+    const postInput = document.getElementById("postInput");
+    const toneSelect = document.getElementById("toneSelect");
+    const feedbackEl = document.getElementById("feedbackTip");
+    const feedEl = document.getElementById("feed");
 
-      <button type="submit">Post</button>
-	  <div id="aiTip" style="margin-top: 0.5em; color: #999; font-style: italic;"></div>
-    </form>
-
-    <section id="feed"></section>
-  </main>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyCRpFRHKlaSs2yLlZddXI2rQYVkEBG1AKo",
-      authDomain: "echo-project-54eee.firebaseapp.com",
-      projectId: "echo-project-54eee",
-      storageBucket: "echo-project-54eee.firebasestorage.app",
-      messagingSenderId: "1067587580201",
-      appId: "1:1067587580201:web:405aef9d6f9a728fc2c738"
+    const currentUser = {
+      uid: "demoUser123",
+      displayName: "you"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    postButton.addEventListener("click", async () => {
+      const text = postInput.value.trim();
+      const tone = toneSelect.value;
+      if (!text) return;
 
-    const form = document.getElementById("post-form");
-    const feedSection = document.getElementById("feed");
-    const toggleOwnFeed = document.getElementById("toggleOwnFeed");
-
-    let currentUser = null;
-
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        currentUser = user;
-        await loadPosts();
-      } else {
-        alert("You must be logged in to view your feed.");
-        window.location.href = "login.html";
-      }
-    });
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const text = document.getElementById("text").value.trim();
-      const tone = document.getElementById("tone").value;
-
-      if (!text || !currentUser) return;
+      const payload = {
+        uid: currentUser.uid,
+        username: currentUser.displayName,
+        text,
+        tone
+      };
 
       try {
         const res = await fetch("/.netlify/functions/generatePost", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            uid: currentUser.uid,
-            text,
-            tone
-          })
+          body: JSON.stringify(payload)
         });
 
-        const result = await res.json();
-        if (res.ok) {
-          document.getElementById("text").value = "";
-          await loadPosts();
+        const data = await res.json();
+
+        if (data.success) {
+          const postEl = document.createElement("div");
+          postEl.className = "post";
+          postEl.innerHTML = `
+            <span class="username">@${currentUser.displayName}</span><br/>
+            ${data.aiPost}
+            <div class="feedback">${data.feedbackTip}</div>
+          `;
+          feedEl.prepend(postEl);
+          postInput.value = "";
+          feedbackEl.textContent = "";
         } else {
-          alert(result.error || "AI failed to respond.");
+          feedbackEl.textContent = "Something went wrong while posting.";
         }
       } catch (err) {
         console.error("Post error:", err);
-        alert("Something went wrong while posting.");
+        feedbackEl.textContent = "AI failed to respond.";
       }
     });
-
-    toggleOwnFeed.addEventListener("change", loadPosts);
-
-    async function loadPosts() {
-      feedSection.innerHTML = "";
-      let q;
-      if (toggleOwnFeed.checked && currentUser) {
-        q = query(collection(db, "posts"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
-      } else {
-        q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
-      }
-
-      const snapshot = await getDocs(q);
-      snapshot.forEach(doc => {
-        const post = doc.data();
-        const el = document.createElement("div");
-        el.className = "post";
-        el.innerHTML = `
-          <p>${post.aiPost}</p>
-          <p class="original">Original: ${post.originalText}</p>
-          <small>by <strong>${post.username || "anonymous"}</strong></small><br>
-          <time>${new Date(post.createdAt).toLocaleString()}</time>
-        `;
-        feedSection.appendChild(el);
-      });
-    }
-	
   </script>
-  <script src="aiInputFeedback.js"></script>
 </body>
 </html>
