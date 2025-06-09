@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ech0 – Log In</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main>
+    <section id="login">
+      <h1>Log in to Ech0</h1>
+      <p>Welcome back. Your optimized self awaits.</p>
+
+      <form id="login-form">
+        <label for="email">Email address:</label>
+        <input type="email" id="email" name="email" required />
+
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required />
+
+        <button type="submit">Log In</button>
+      </form>
+
+      <p>Don't have an account yet? <a href="index.html">Sign up here</a>.</p>
+    </section>
+
+    <footer>
+      <p>© 2025 Ech0. Welcome back to your feed.</p>
+    </footer>
+  </main>
+
+  <!-- Firebase Login Script -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRpFRHKlaSs2yLlZddXI2rQYVkEBG1AKo",
+      authDomain: "echo-project-54eee.firebaseapp.com",
+      projectId: "echo-project-54eee",
+      storageBucket: "echo-project-54eee.firebasestorage.app",
+      messagingSenderId: "1067587580201",
+      appId: "1:1067587580201:web:405aef9d6f9a728fc2c738"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        alert("Login successful! Redirecting to feed...");
+        window.location.href = "feed.html";
+      } catch (error) {
+        console.error("Login error:", error);
+        alert(error.message || "Failed to log in.");
+      }
+    });
+  </script>
+</body>
+</html>
