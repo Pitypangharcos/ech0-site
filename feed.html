@@ -42,6 +42,12 @@
 <body>
   <main class="feed-container">
     <h1>Your Feed</h1>
+
+    <label>
+      <input type="checkbox" id="toggleOwnFeed" checked>
+      Show only my posts
+    </label>
+
     <form id="post-form" class="post-form">
       <label for="text">What's on your mind?</label>
       <textarea id="text" rows="3" style="width:100%;" required></textarea>
@@ -65,7 +71,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCRpFRHKlaSs2yLlZddXI2rQYVkEBG1AKo",
@@ -82,13 +88,14 @@
 
     const form = document.getElementById("post-form");
     const feedSection = document.getElementById("feed");
+    const toggleOwnFeed = document.getElementById("toggleOwnFeed");
 
     let currentUser = null;
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         currentUser = user;
-        loadPosts(user.uid);
+        await loadPosts();
       } else {
         alert("You must be logged in to view your feed.");
         window.location.href = "login.html";
@@ -116,7 +123,7 @@
         const result = await res.json();
         if (res.ok) {
           document.getElementById("text").value = "";
-          await loadPosts(currentUser.uid); // refresh feed
+          await loadPosts();
         } else {
           alert(result.error || "AI failed to respond.");
         }
@@ -126,9 +133,17 @@
       }
     });
 
-    async function loadPosts(uid) {
+    toggleOwnFeed.addEventListener("change", loadPosts);
+
+    async function loadPosts() {
       feedSection.innerHTML = "";
-      const q = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
+      let q;
+      if (toggleOwnFeed.checked && currentUser) {
+        q = query(collection(db, "posts"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
+      } else {
+        q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+      }
+
       const snapshot = await getDocs(q);
       snapshot.forEach(doc => {
         const post = doc.data();
@@ -137,6 +152,7 @@
         el.innerHTML = `
           <p>${post.aiPost}</p>
           <p class="original">Original: ${post.originalText}</p>
+          <small>by <strong>${post.username || "anonymous"}</strong></small><br>
           <time>${new Date(post.createdAt).toLocaleString()}</time>
         `;
         feedSection.appendChild(el);
