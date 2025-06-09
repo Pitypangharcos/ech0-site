@@ -12,9 +12,7 @@ exports.handler = async (event) => {
   }
 
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-  const prompt = `Rewrite the following user input as a ${tone}, attention-grabbing social media post optimized for engagement. Keep it authentic to the user's tone:
-
-User input: "${text}"`;
+  const prompt = `Rewrite the following user input as a ${tone}, attention-grabbing social media post optimized for engagement. Keep it authentic to the user's tone:\n\nUser input: "${text}"`;
 
   try {
     const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -35,10 +33,15 @@ User input: "${text}"`;
     });
 
     const openaiData = await openaiResponse.json();
+    console.log("OpenAI response:", JSON.stringify(openaiData, null, 2));
+
     const aiPost = openaiData.choices?.[0]?.message?.content?.trim();
 
     if (!aiPost) {
-      return { statusCode: 500, body: JSON.stringify({ error: "AI failed to generate a response" }) };
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: "AI failed to generate a response", openaiData })
+      };
     }
 
     const admin = require("firebase-admin");
