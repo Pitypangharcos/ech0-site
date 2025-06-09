@@ -4,44 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ech0 Feed</title>
+  <link rel="stylesheet" href="style.css" />
   <style>
-    body {
-      background-color: #0e0e0e;
-      color: #f2f2f2;
-      font-family: 'Segoe UI', sans-serif;
-      margin: 0;
-      padding: 2em;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    textarea {
-      background: #1a1a1a;
-      color: #f2f2f2;
-      border: 1px solid #333;
-      padding: 1em;
-      border-radius: 4px;
-      width: 100%;
-      max-width: 600px;
-      resize: vertical;
-    }
-    button {
-      margin-top: 1em;
-      background-color: #5c5cff;
-      color: white;
-      border: none;
-      padding: 0.6em 1.2em;
-      font-weight: bold;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    button:hover {
-      background-color: #3f3fff;
-    }
-    .select-tone {
-      margin-top: 0.5em;
-      margin-bottom: 1em;
-    }
     #aiPreview {
       margin-top: 2em;
       padding: 1em;
@@ -50,96 +14,174 @@
       max-width: 600px;
       display: none;
     }
-    #feed {
-      margin-top: 3em;
-      width: 100%;
-      max-width: 600px;
+    .button-group {
+      margin-top: 1em;
+      display: flex;
+      gap: 1em;
     }
-    .post {
-      background: #1a1a1a;
-      padding: 1em;
-      border: 1px solid #333;
-      border-radius: 4px;
-      margin-bottom: 1em;
-    }
-    .username {
-      color: #88aaff;
-      font-weight: bold;
-    }
-    .feedback {
-      font-style: italic;
-      color: #888;
+    .likes {
       margin-top: 0.5em;
+      color: #ccc;
     }
   </style>
 </head>
 <body>
-  <h1>ech0 // feed</h1>
+  <main>
+    <h1>ech0 // feed</h1>
 
-  <textarea id="postInput" rows="4" placeholder="What are you thinking?"></textarea>
-  <div class="select-tone">
-    <label for="toneSelect">Tone:</label>
-    <select id="toneSelect">
-      <option value="attention-grabbing">Attention-grabbing</option>
-      <option value="funny">Funny</option>
-      <option value="sarcastic">Sarcastic</option>
-      <option value="playful">Playful</option>
-    </select>
-  </div>
-  <button id="postButton">Post</button>
+    <textarea id="postInput" rows="4" placeholder="What are you thinking?"></textarea>
+    <div class="select-tone">
+      <label for="toneSelect">Tone:</label>
+      <select id="toneSelect">
+        <option value="attention-grabbing">Attention-grabbing</option>
+        <option value="funny">Funny</option>
+        <option value="sarcastic">Sarcastic</option>
+        <option value="playful">Playful</option>
+      </select>
+    </div>
+    <button id="postButton">Generate Feedback</button>
 
-  <div id="feed"></div>
+    <div id="aiPreview">
+      <p><strong>Your Post:</strong></p>
+      <div id="previewContent"></div>
+      <div class="feedback" id="feedbackTipText"></div>
+      <div class="button-group">
+        <button id="confirmButton">Confirm & Publish</button>
+        <button id="editButton">Edit</button>
+      </div>
+    </div>
 
-  <script>
+    <section id="feed"></section>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getFirestore, collection, addDoc, query, orderBy,
+      getDocs, updateDoc, doc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRpFRHKlaSs2yLlZddXI2rQYVkEBG1AKo",
+      authDomain: "echo-project-54eee.firebaseapp.com",
+      projectId: "echo-project-54eee",
+      storageBucket: "echo-project-54eee.firebasestorage.app",
+      messagingSenderId: "1067587580201",
+      appId: "1:1067587580201:web:405aef9d6f9a728fc2c738"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
     const postInput = document.getElementById("postInput");
     const toneSelect = document.getElementById("toneSelect");
     const postButton = document.getElementById("postButton");
+    const previewContent = document.getElementById("previewContent");
+    const feedbackTipText = document.getElementById("feedbackTipText");
+    const aiPreview = document.getElementById("aiPreview");
+    const confirmButton = document.getElementById("confirmButton");
+    const editButton = document.getElementById("editButton");
     const feedEl = document.getElementById("feed");
 
-    const currentUser = {
-      uid: "demoUser123",
-      displayName: "you"
-    };
+    let previewData = {};
 
     postButton.addEventListener("click", async () => {
       const text = postInput.value.trim();
       const tone = toneSelect.value;
-      if (!text) return;
 
-      const payload = {
-        uid: currentUser.uid,
-        username: currentUser.displayName,
-        text,
-        tone
-      };
+      if (!text) return;
 
       try {
         const res = await fetch("/.netlify/functions/generatePost", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({ uid: "temp", username: "temp", text, tone })
         });
-
         const data = await res.json();
-        if (data.success) {
-          const postEl = document.createElement("div");
-          postEl.className = "post";
-          postEl.innerHTML = `
-            <div class="username">@${currentUser.displayName}</div>
-            ${text}
-            <div class="feedback">${data.feedbackTip}</div>
-          `;
-          feedEl.prepend(postEl);
 
-          postInput.value = "";
+        if (data.success) {
+          previewContent.textContent = text;
+          feedbackTipText.textContent = data.feedbackTip;
+          aiPreview.style.display = "block";
+
+          previewData = {
+            originalText: text,
+            feedbackTip: data.feedbackTip,
+            tone: tone,
+            wasEdited: false
+          };
+
+          postButton.style.display = "none";
+          postInput.disabled = true;
+          toneSelect.disabled = true;
         } else {
-          alert("Something went wrong while posting.");
+          alert("Failed to analyze post.");
         }
       } catch (err) {
-        console.error("Post error:", err);
-        alert("AI failed to respond.");
+        console.error(err);
+        alert("AI failed.");
       }
     });
+
+    confirmButton.addEventListener("click", async () => {
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) return alert("Not logged in.");
+
+        try {
+          await addDoc(collection(db, "posts"), {
+            ...previewData,
+            uid: user.uid,
+            username: user.email.split("@")[0],
+            createdAt: serverTimestamp(),
+            likes: 0
+          });
+
+          loadFeed();
+
+          postInput.value = "";
+          aiPreview.style.display = "none";
+          postButton.style.display = "inline-block";
+          postInput.disabled = false;
+          toneSelect.disabled = false;
+        } catch (err) {
+          console.error("Publish error:", err);
+        }
+      });
+    });
+
+    editButton.addEventListener("click", () => {
+      previewData.wasEdited = true;
+      aiPreview.style.display = "none";
+      postButton.style.display = "inline-block";
+      postInput.disabled = false;
+      toneSelect.disabled = false;
+    });
+
+    async function loadFeed() {
+      const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+      const snap = await getDocs(q);
+
+      feedEl.innerHTML = "";
+      snap.forEach(doc => {
+        const data = doc.data();
+        const post = document.createElement("div");
+        post.className = "post";
+        post.innerHTML = `
+          <div class="username">@${data.username || "anon"}</div>
+          ${data.originalText}
+          <div class="feedback">${data.feedbackTip || ""}</div>
+          <div class="likes">❤️ ${data.likes || 0} like${data.likes === 1 ? "" : "s"}</div>
+        `;
+        feedEl.appendChild(post);
+      });
+    }
+
+    // Initial load
+    loadFeed();
   </script>
 </body>
 </html>
