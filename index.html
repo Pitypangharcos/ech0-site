@@ -39,45 +39,52 @@
   </main>
 
   <!-- Firebase SDK + Firestore integration -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCRpFRHKlaSs2yLlZddXI2rQYVkEBG1AKo",
-      authDomain: "echo-project-54eee.firebaseapp.com",
-      projectId: "echo-project-54eee",
-      storageBucket: "echo-project-54eee.firebasestorage.app",
-      messagingSenderId: "1067587580201",
-      appId: "1:1067587580201:web:405aef9d6f9a728fc2c738"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyCRpFRHKlaSs2yLlZddXI2rQYVkEBG1AKo",
+    authDomain: "echo-project-54eee.firebaseapp.com",
+    projectId: "echo-project-54eee",
+    storageBucket: "echo-project-54eee.firebasestorage.app",
+    messagingSenderId: "1067587580201",
+    appId: "1:1067587580201:web:405aef9d6f9a728fc2c738"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-    document.getElementById("signup-form").addEventListener("submit", async function(e) {
-      e.preventDefault();
-      const email = document.getElementById("email").value.trim();
-      const username = document.getElementById("username").value.trim();
+  document.getElementById("signup-form").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const email = document.getElementById("email").value.trim();
+    const username = document.getElementById("username").value.trim();
 
-      if (!email || !username) {
-        alert("Please fill in both fields.");
-        return;
-      }
+    if (!email || !username) {
+      alert("Please fill in both fields.");
+      return;
+    }
 
-      try {
-        await addDoc(collection(db, "users"), {
-          email: email,
-          username: username,
-          createdAt: new Date().toISOString()
-        });
-        alert("You're in. Watch your inbox.");
-        document.getElementById("signup-form").reset();
-      } catch (err) {
-        console.error("Error adding document: ", err);
-        alert("Something went wrong. Try again later.");
-      }
-    });
-  </script>
+    try {
+      await addDoc(collection(db, "users"), {
+        email: email,
+        username: username,
+        createdAt: new Date().toISOString()
+      });
+
+      await fetch("/.netlify/functions/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, username })
+      });
+
+      alert("You're in. Watch your inbox.");
+      document.getElementById("signup-form").reset();
+    } catch (err) {
+      console.error("Submission error: ", err);
+      alert("Something went wrong. Try again later.");
+    }
+  });
+</script>
 </body>
 </html>
