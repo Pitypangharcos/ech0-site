@@ -32,33 +32,23 @@ exports.handler = async (event) => {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
-  const { uid, text, tone } = JSON.parse(event.body);
+  try {
+    const { uid, text, tone } = JSON.parse(event.body);
 
-  if (!uid || !text || !tone) {
-    return { statusCode: 400, body: JSON.stringify({ error: "Missing required fields" }) };
+    if (!uid || !text || !tone) {
+      return { statusCode: 400, body: JSON.stringify({ error: "Missing required fields" }) };
+    }
+
+    const aiPost = fakeAIResponse(text, tone);
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ success: true, aiPost })
+    };
+  } catch (err) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: "Function failed to respond", details: err.message })
+    };
   }
-
-  const aiPost = fakeAIResponse(text, tone);
-
-  const admin = require("firebase-admin");
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.applicationDefault()
-    });
-  }
-  const db = admin.firestore();
-
-  await db.collection("posts").add({
-    userId: uid,
-    username: "anonymous",
-    originalText: text,
-    aiPost,
-    tone,
-    createdAt: new Date().toISOString()
-  });
-
-  return {
-    statusCode: 200,
-    body: JSON.stringify({ success: true, aiPost })
-  };
 };
