@@ -71,11 +71,6 @@
       color: #888;
       margin-top: 0.5em;
     }
-    .button-group {
-      margin-top: 1em;
-      display: flex;
-      gap: 1em;
-    }
   </style>
 </head>
 <body>
@@ -91,17 +86,7 @@
       <option value="playful">Playful</option>
     </select>
   </div>
-  <button id="postButton">Generate AI Post</button>
-
-  <div id="aiPreview">
-    <p><strong>AI Suggestion:</strong></p>
-    <div id="aiPostContent"></div>
-    <div class="feedback" id="feedbackTipText"></div>
-    <div class="button-group">
-      <button id="confirmButton">Confirm & Publish</button>
-      <button id="editButton">Edit</button>
-    </div>
-  </div>
+  <button id="postButton">Post</button>
 
   <div id="feed"></div>
 
@@ -109,14 +94,8 @@
     const postInput = document.getElementById("postInput");
     const toneSelect = document.getElementById("toneSelect");
     const postButton = document.getElementById("postButton");
-    const aiPreview = document.getElementById("aiPreview");
-    const aiPostContent = document.getElementById("aiPostContent");
-    const feedbackTipText = document.getElementById("feedbackTipText");
-    const confirmButton = document.getElementById("confirmButton");
-    const editButton = document.getElementById("editButton");
     const feedEl = document.getElementById("feed");
 
-    let aiPostData = null;
     const currentUser = {
       uid: "demoUser123",
       displayName: "you"
@@ -143,47 +122,23 @@
 
         const data = await res.json();
         if (data.success) {
-          aiPostData = { ...data, originalText: text, tone };
-          aiPostContent.textContent = data.aiPost;
-          feedbackTipText.textContent = data.feedbackTip;
-          aiPreview.style.display = "block";
-          postButton.style.display = "none";
-          postInput.disabled = true;
-          toneSelect.disabled = true;
+          const postEl = document.createElement("div");
+          postEl.className = "post";
+          postEl.innerHTML = `
+            <div class="username">@${currentUser.displayName}</div>
+            ${text}
+            <div class="feedback">${data.feedbackTip}</div>
+          `;
+          feedEl.prepend(postEl);
+
+          postInput.value = "";
         } else {
-          alert("Something went wrong while generating the post.");
+          alert("Something went wrong while posting.");
         }
       } catch (err) {
-        console.error("Generation error:", err);
+        console.error("Post error:", err);
         alert("AI failed to respond.");
       }
-    });
-
-    confirmButton.addEventListener("click", () => {
-      if (!aiPostData) return;
-
-      const postEl = document.createElement("div");
-      postEl.className = "post";
-      postEl.innerHTML = `
-        <div class="username">@${currentUser.displayName}</div>
-        ${aiPostData.aiPost}
-        <div class="feedback">${aiPostData.feedbackTip}</div>
-      `;
-      feedEl.prepend(postEl);
-
-      // Reset input
-      postInput.value = "";
-      postInput.disabled = false;
-      toneSelect.disabled = false;
-      aiPreview.style.display = "none";
-      postButton.style.display = "inline-block";
-    });
-
-    editButton.addEventListener("click", () => {
-      aiPreview.style.display = "none";
-      postInput.disabled = false;
-      toneSelect.disabled = false;
-      postButton.style.display = "inline-block";
     });
   </script>
 </body>
