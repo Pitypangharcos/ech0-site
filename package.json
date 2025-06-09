@@ -1,0 +1,9 @@
+{
+  "name": "ech0-site",
+  "version": "1.0.0",
+  "description": "Ech0 ARG site with Firebase, Mailchimp, and Netlify Functions",
+  "main": "index.html",
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}
