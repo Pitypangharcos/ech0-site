@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ech0 Feed</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .feed-container {
+      max-width: 720px;
+      margin: 2rem auto;
+      padding: 1rem;
+    }
+
+    .post-form {
+      margin-bottom: 2rem;
+    }
+
+    .tone-options {
+      margin: 0.5rem 0;
+    }
+
+    .post {
+      padding: 1rem;
+      border: 1px solid #ccc;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .post time {
+      font-size: 0.8rem;
+      color: #888;
+    }
+
+    .post .original {
+      font-style: italic;
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+  <main class="feed-container">
+    <h1>Your Feed</h1>
+    <form id="post-form" class="post-form">
+      <label for="text">What's on your mind?</label>
+      <textarea id="text" rows="3" style="width:100%;" required></textarea>
+
+      <div class="tone-options">
+        <label for="tone">Choose tone:</label>
+        <select id="tone">
+          <option value="funny">Funny</option>
+          <option value="sarcastic">Sarcastic</option>
+          <option value="attention-grabbing">Attention-Grabbing</option>
+          <option value="playful">Playful</option>
+        </select>
+      </div>
+
+      <button type="submit">Post</button>
+    </form>
+
+    <section id="feed"></section>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRpFRHKlaSs2yLlZddXI2rQYVkEBG1AKo",
+      authDomain: "echo-project-54eee.firebaseapp.com",
+      projectId: "echo-project-54eee",
+      storageBucket: "echo-project-54eee.firebasestorage.app",
+      messagingSenderId: "1067587580201",
+      appId: "1:1067587580201:web:405aef9d6f9a728fc2c738"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const form = document.getElementById("post-form");
+    const feedSection = document.getElementById("feed");
+
+    let currentUser = null;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUser = user;
+        loadPosts(user.uid);
+      } else {
+        alert("You must be logged in to view your feed.");
+        window.location.href = "login.html";
+      }
+    });
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = document.getElementById("text").value.trim();
+      const tone = document.getElementById("tone").value;
+
+      if (!text || !currentUser) return;
+
+      try {
+        const res = await fetch("/.netlify/functions/generatePost", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uid: currentUser.uid,
+            text,
+            tone
+          })
+        });
+
+        const result = await res.json();
+        if (res.ok) {
+          document.getElementById("text").value = "";
+          await loadPosts(currentUser.uid); // refresh feed
+        } else {
+          alert(result.error || "AI failed to respond.");
+        }
+      } catch (err) {
+        console.error("Post error:", err);
+        alert("Something went wrong while posting.");
+      }
+    });
+
+    async function loadPosts(uid) {
+      feedSection.innerHTML = "";
+      const q = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
+      const snapshot = await getDocs(q);
+      snapshot.forEach(doc => {
+        const post = doc.data();
+        const el = document.createElement("div");
+        el.className = "post";
+        el.innerHTML = `
+          <p>${post.aiPost}</p>
+          <p class="original">Original: ${post.originalText}</p>
+          <time>${new Date(post.createdAt).toLocaleString()}</time>
+        `;
+        feedSection.appendChild(el);
+      });
+    }
+  </script>
+</body>
+</html>
