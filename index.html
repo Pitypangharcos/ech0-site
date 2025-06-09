@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ech0 – Amplify Your Voice</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main>
+    <section id="hero">
+      <h1>Post smarter. Get noticed.</h1>
+      <p>Ech0 helps you craft the perfect post – powered by AI, designed for reach.</p>
+
+      <form id="signup-form">
+        <label for="email">Your email:</label>
+        <input type="email" id="email" name="email" required />
+
+        <label for="username">Choose your username:</label>
+        <input type="text" id="username" name="username" required />
+
+        <button type="submit">Sign Up</button>
+      </form>
+    </section>
+
+    <section id="features">
+      <h2>Why Ech0?</h2>
+      <ul>
+        <li>✦ AI-crafted posts that hit harder</li>
+        <li>✦ Smart suggestions based on your tone</li>
+        <li>✦ Engagement boosts when you need them</li>
+        <li>✦ Stay visible. Stay relevant.</li>
+      </ul>
+    </section>
+
+    <footer>
+      <p>© 2025 Ech0. Built to be seen.</p>
+    </footer>
+  </main>
+
+  <!-- Firebase SDK + Firestore integration -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRpFRHKlaSs2yLlZddXI2rQYVkEBG1AKo",
+      authDomain: "echo-project-54eee.firebaseapp.com",
+      projectId: "echo-project-54eee",
+      storageBucket: "echo-project-54eee.firebasestorage.app",
+      messagingSenderId: "1067587580201",
+      appId: "1:1067587580201:web:405aef9d6f9a728fc2c738"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    document.getElementById("signup-form").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const email = document.getElementById("email").value.trim();
+      const username = document.getElementById("username").value.trim();
+
+      if (!email || !username) {
+        alert("Please fill in both fields.");
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "users"), {
+          email: email,
+          username: username,
+          createdAt: new Date().toISOString()
+        });
+        alert("You're in. Watch your inbox.");
+        document.getElementById("signup-form").reset();
+      } catch (err) {
+        console.error("Error adding document: ", err);
+        alert("Something went wrong. Try again later.");
+      }
+    });
+  </script>
+</body>
+</html>
