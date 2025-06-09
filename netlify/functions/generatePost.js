@@ -41,14 +41,33 @@ exports.handler = async (event) => {
 
     const aiPost = fakeAIResponse(text, tone);
 
+    const admin = require("firebase-admin");
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.applicationDefault()
+      });
+    }
+
+    const db = admin.firestore();
+
+    await db.collection("posts").add({
+      userId: uid,
+      username: "anonymous",
+      originalText: text,
+      aiPost,
+      tone,
+      createdAt: new Date().toISOString()
+    });
+
     return {
       statusCode: 200,
       body: JSON.stringify({ success: true, aiPost })
     };
   } catch (err) {
+    console.error("Combined handler error:", err);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Function failed to respond", details: err.message })
+      body: JSON.stringify({ error: "Failed to generate or save post", details: err.message })
     };
   }
 };
