@@ -1,10 +1,11 @@
 {
   "name": "ech0-site",
   "version": "1.0.0",
-  "description": "Ech0 ARG site with Firebase, Mailchimp, and Netlify Functions",
+  "description": "Ech0 ARG site with Firebase, Netlify Functions, and OpenAI integration",
   "main": "index.html",
+  "type": "commonjs",
   "dependencies": {
-  "node-fetch": "^2.6.7"
-}
-
+    "firebase-admin": "^11.10.1",
+    "node-fetch": "^2.6.7"
+  }
 }
