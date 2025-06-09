@@ -42,9 +42,11 @@ exports.handler = async (event) => {
     const aiPost = fakeAIResponse(text, tone);
 
     const admin = require("firebase-admin");
+
     if (!admin.apps.length) {
+      const credentials = JSON.parse(process.env.FIREBASE_CREDENTIALS);
       admin.initializeApp({
-        credential: admin.credential.applicationDefault()
+        credential: admin.credential.cert(credentials)
       });
     }
 
@@ -64,7 +66,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({ success: true, aiPost })
     };
   } catch (err) {
-    console.error("Combined handler error:", err);
+    console.error("Service account handler error:", err);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: "Failed to generate or save post", details: err.message })
